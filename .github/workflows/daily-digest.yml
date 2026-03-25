@@ -1,0 +1,59 @@
+name: 每日AI简报自动发布
+
+on:
+  # 每天北京时间 08:00 自动运行 (UTC+8 = UTC 00:00)
+  schedule:
+    - cron: '0 0 * * *'
+  # 支持手动触发（用于测试）
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: 生成并发布到公众号草稿箱
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. 拉取代码 ───────────────────────────────────────────────────────────
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # ── 2. 安装 Node.js ───────────────────────────────────────────────────────
+      - name: 设置 Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # ── 3. 安装字体（封面图中文字体）────────────────────────────────────────────
+      - name: 安装中文字体
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk --no-install-recommends
+          fc-cache -fv
+
+      # ── 4. 安装依赖 + Playwright Chromium ────────────────────────────────────
+      - name: 安装 npm 依赖
+        working-directory: .github/scripts
+        run: npm install
+
+      - name: 安装 Playwright Chromium
+        working-directory: .github/scripts
+        run: npx playwright install chromium --with-deps
+
+      # ── 5. 运行主脚本 ─────────────────────────────────────────────────────────
+      - name: 运行每日简报脚本
+        working-directory: .github/scripts
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node daily-digest.js
+
+      # ── 6. 上传封面图 artifact（方便查看）────────────────────────────────────
+      - name: 保存封面图
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cover-${{ github.run_id }}
+          path: /tmp/cover.png
+          retention-days: 7
