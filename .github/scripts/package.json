@@ -1,0 +1,9 @@
+{
+  "name": "daily-digest",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "formdata-node": "^6.0.3",
+    "playwright": "^1.40.0"
+  }
+}
